@@ -114,7 +114,7 @@ print(f"Validation Accuracy: {100 * correct / total:.2f}%")
 
 def fgsm_attack(model, images, labels, epsilon):
     # Set requires_grad to True for images
-    images.requires_grad = True
+    images.requires_grad_()  # Ensure the gradient tracking is on
     
     # Forward pass to get the model's predictions
     outputs = model(images)
@@ -137,13 +137,10 @@ def fgsm_attack(model, images, labels, epsilon):
     
     return adv_images
 
-
-
 # Run the adversarial attack and test model accuracy
 model.eval()
 correct = 0
 total = 0
-# adv_images = fgsm_attack(model, images, labels, epsilon=0.1)
 
 with torch.no_grad():
     for images, labels in train_loader:
@@ -160,5 +157,3 @@ with torch.no_grad():
         correct += (predicted == labels).sum().item()
 
 print(f"Accuracy on adversarial examples: {100 * correct / total:.2f}%")
-
-
