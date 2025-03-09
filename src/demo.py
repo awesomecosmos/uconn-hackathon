@@ -40,11 +40,15 @@ print("Classes:", dataset.classes)
 
 # Load pre-trained ResNet18
 # model = models.resnet50(pretrained=True)
-model = EfficientNet.from_pretrained('efficientnet-b0')
+# # Replace the last fully connected layer to match LFW classes
+# num_classes = len(dataset.classes)  # Number of people in LFW dataset
+# model.fc = nn.Linear(model.fc.in_features, num_classes)
 
-# Replace the last fully connected layer to match LFW classes
-num_classes = len(dataset.classes)  # Number of people in LFW dataset
-model.fc = nn.Linear(model.fc.in_features, num_classes)
+model = EfficientNet.from_pretrained('efficientnet-b0')
+num_classes = len(dataset.classes)
+model._fc = nn.Linear(model._fc.in_features, num_classes)
+
+
 
 # Move model to GPU if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
