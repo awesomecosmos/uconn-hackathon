@@ -1,26 +1,41 @@
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+import torch
+import torch.nn as nn
+import torchvision.models as models
 
-# Define transformations (resize + convert to tensor)
+# Define preprocessing transformations
 transform = transforms.Compose([
-    transforms.Resize((128, 128)),  # Resize images to 128x128
-    transforms.ToTensor(),  # Convert to PyTorch tensor
+    transforms.Resize((224, 224)),  # Resize for ResNet
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Load dataset
-lfw_dataset = datasets.ImageFolder(root="../data/", transform=transform)
+# Load dataset using ImageFolder
+data_dir = "data/"  # Path to your dataset
+dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
-# Create a DataLoader
-lfw_loader = DataLoader(lfw_dataset, batch_size=32, shuffle=True)
+# Split into training and validation sets
+train_size = int(0.8 * len(dataset))
+val_size = len(dataset) - train_size
+train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-# Check some samples
-for images, labels in lfw_loader:
-    print(f"Batch shape: {images.shape}")  # (batch_size, channels, height, width)
-    print(f"Labels: {labels[:5]}")
-    break
+# Create DataLoaders
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
+# Print class names (person names)
+print("Classes:", dataset.classes)
 
-# import fiftyone as fo
-# import fiftyone.zoo as foz
-# dataset = fo.Dataset.from_images_dir("../data/")
-# session = fo.launch_app(dataset, port=5151)
+# Load pre-trained ResNet18
+model = models.resnet18(pretrained=True)
+
+# Replace the last fully connected layer to match LFW classes
+num_classes = len(dataset.classes)  # Number of people in LFW dataset
+model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+# Move model to GPU if available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
+
+print(model)  # Check model architecture
