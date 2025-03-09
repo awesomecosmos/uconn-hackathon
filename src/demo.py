@@ -3,6 +3,18 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import torch.optim as optim
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Function to convert tensor to a NumPy array
+def imshow(image):
+    # Denormalize the image
+    image = image / 2 + 0.5  # Unnormalize
+    np_image = image.numpy()  # Convert to numpy array
+    plt.imshow(np.transpose(np_image, (1, 2, 0)))  # Convert from CHW to HWC format
+    plt.show()
+
 
 # Define preprocessing transformations
 transform = transforms.Compose([
@@ -12,7 +24,7 @@ transform = transforms.Compose([
 ])
 
 # Load dataset using ImageFolder
-data_dir = "data/"  # Path to your dataset
+data_dir = "../data/"  # Path to your dataset
 dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
 # Split into training and validation sets
@@ -39,3 +51,62 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
 print(model)  # Check model architecture
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+num_epochs = 1  # Adjust as needed
+
+for epoch in range(num_epochs):
+    model.train()
+    running_loss = 0.0
+    
+    for images, labels in train_loader:
+        images, labels = images.to(device), labels.to(device)
+        
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        
+        running_loss += loss.item()
+    
+    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+
+print("Training complete!")
+
+
+model.eval()
+correct, total = 0, 0
+
+with torch.no_grad():
+    # Visualize one batch of validation images
+    data_iter = iter(val_loader)
+    images, labels = next(data_iter)  # Get one batch of images and labels
+    
+    images, labels = images.to(device), labels.to(device)
+
+    # Get model predictions
+    outputs = model(images)
+    _, predicted = torch.max(outputs, 1)
+
+    # Convert predictions to list
+    predicted_labels = predicted.cpu().numpy()
+    true_labels = labels.cpu().numpy()
+
+    # Visualize the batch of images with predictions
+    fig = plt.figure(figsize=(10, 10))
+    for i in range(min(16, len(images))):  # Show up to 16 images in a grid
+        ax = fig.add_subplot(4, 4, i+1)
+        imshow(images[i].cpu())  # Show image
+        ax.set_title(f"True: {dataset.classes[true_labels[i]]}\nPred: {dataset.classes[predicted_labels[i]]}")
+        ax.axis('off')
+    plt.savefig("../figs/model_viz.jpg", dpi=300)
+    plt.show()
+
+    # Calculate accuracy
+    total += labels.size(0)
+    correct += (predicted == labels).sum().item()
+
+print(f"Validation Accuracy: {100 * correct / total:.2f}%")
