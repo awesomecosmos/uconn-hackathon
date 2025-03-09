@@ -6,6 +6,7 @@ import torchvision.models as models
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
+from efficientnet_pytorch import EfficientNet
 
 # Function to convert tensor to a NumPy array
 def imshow(image):
@@ -24,7 +25,7 @@ transform = transforms.Compose([
 ])
 
 # Load dataset using ImageFolder
-data_dir = "../data/"  # Path to your dataset
+data_dir = "../data/lfw-deepfunneled/"  # Path to your dataset
 dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
 # Split into training and validation sets
@@ -35,48 +36,43 @@ train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size,
 # Create DataLoaders
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-
-# Print class names (person names)
 print("Classes:", dataset.classes)
 
 # Load pre-trained ResNet18
-model = models.resnet18(pretrained=True)
+# model = models.resnet50(pretrained=True)
+model = EfficientNet.from_pretrained('efficientnet-b0')
 
 # Replace the last fully connected layer to match LFW classes
 num_classes = len(dataset.classes)  # Number of people in LFW dataset
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 
 # Move model to GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
-
 print(model)  # Check model architecture
 
+# setting loss and optimzation function
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-num_epochs = 1  # Adjust as needed
+num_epochs = 10  
 
+# training loop
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
-    
     for images, labels in train_loader:
         images, labels = images.to(device), labels.to(device)
-        
         optimizer.zero_grad()
         outputs = model(images)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        
         running_loss += loss.item()
-    
     print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
-
 print("Training complete!")
 
-
+# validation loop
 model.eval()
 correct, total = 0, 0
 
@@ -84,7 +80,6 @@ with torch.no_grad():
     # Visualize one batch of validation images
     data_iter = iter(val_loader)
     images, labels = next(data_iter)  # Get one batch of images and labels
-    
     images, labels = images.to(device), labels.to(device)
 
     # Get model predictions
