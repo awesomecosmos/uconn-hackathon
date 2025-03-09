@@ -11,4 +11,6 @@ The overview of this project is to identify vulnerabilities in computer vision s
 
 **Dataset:** [Labeled Faces in the Wild (LFW)](https://www.kaggle.com/datasets/jessicali9530/lfw-dataset)
 
-**Model:** A pre-trained ResNet-18.
+**Model:** A pre-trained EfficientNet.
+
+[My Hackathon Pitch Deck](https://docs.google.com/presentation/d/1Ma4oB0ndFhmYYsQIUKFJS6Ns4if7TwL3OxZWTEZgyWc/edit?usp=sharing)
