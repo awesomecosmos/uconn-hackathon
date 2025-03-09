@@ -48,8 +48,6 @@ model = EfficientNet.from_pretrained('efficientnet-b0')
 num_classes = len(dataset.classes)
 model._fc = nn.Linear(model._fc.in_features, num_classes)
 
-
-
 # Move model to GPU if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
@@ -59,7 +57,7 @@ print(model)  # Check model architecture
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-num_epochs = 10  
+num_epochs = 5 
 
 # training loop
 for epoch in range(num_epochs):
@@ -109,3 +107,58 @@ with torch.no_grad():
     correct += (predicted == labels).sum().item()
 
 print(f"Validation Accuracy: {100 * correct / total:.2f}%")
+
+
+
+
+
+def fgsm_attack(model, images, labels, epsilon):
+    # Set requires_grad to True for images
+    images.requires_grad = True
+    
+    # Forward pass to get the model's predictions
+    outputs = model(images)
+    loss = nn.CrossEntropyLoss()(outputs, labels)
+    
+    # Zero all gradients before backward pass
+    model.zero_grad()
+    
+    # Backward pass to compute the gradients of the loss w.r.t. the image
+    loss.backward()
+    
+    # Collect the gradients of the image
+    data_grad = images.grad.data
+    
+    # Create the adversarial image by adding the perturbation to the original image
+    adv_images = images + epsilon * data_grad.sign()
+    
+    # Clip the image to ensure pixel values stay within the valid range [0, 1]
+    adv_images = torch.clamp(adv_images, 0, 1)
+    
+    return adv_images
+
+
+
+# Run the adversarial attack and test model accuracy
+model.eval()
+correct = 0
+total = 0
+# adv_images = fgsm_attack(model, images, labels, epsilon=0.1)
+
+with torch.no_grad():
+    for images, labels in train_loader:
+        images, labels = images.to(device), labels.to(device)
+        
+        # Generate adversarial images using FGSM
+        adv_images = fgsm_attack(model, images, labels, epsilon=0.1)
+        
+        # Get the model predictions for adversarial images
+        outputs = model(adv_images)
+        _, predicted = torch.max(outputs, 1)
+        
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+print(f"Accuracy on adversarial examples: {100 * correct / total:.2f}%")
+
+
